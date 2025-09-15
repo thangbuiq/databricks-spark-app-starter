@@ -1,0 +1,21 @@
+name: build
+on: [push, pull_request]
+
+jobs:
+  uv_build:
+    name: uv build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Build wheel
+        run: uv build --verbose --wheel
+
+      - name: List dist folder
+        run: ls -lah dist/
