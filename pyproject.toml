@@ -1,30 +1,40 @@
 [project]
-name = "databricks-spark-app-starter"
+name = "databricks_spark_app"
 version = "0.1.0"
 description = "Starter kit for building and deploying Apache Spark applications on Databricks"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyspark>=3.5.0",
+    "pydantic>=2.11.8",
+    "pydantic-settings>=2.10.1",
     "databricks-connect>=15.0.0",
+    "databricks-cli>=0.18.0",
+    "setuptools>=80.9.0",
+    "wheel>=0.45.1",
 ]
+
+[project.scripts]
+spark_app = "databricks_spark_app.pipeline:main"
+databricks_deploy = "databricks_spark_app.deploy:main"
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.1.0",
 ]
 
+[tool.uv]
+package = true
+
 [tool.ruff]
-target-version = "py312"
-line-length = 88
-fix = true
+line-length = 120
+exclude = [".venv", "build", "dist", "include"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = ["F", "I001", "RUF022"]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
 
-[tool.ruff.lint.isort]
-known-first-party = ["databricks_spark_app"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/databricks_spark_app"]

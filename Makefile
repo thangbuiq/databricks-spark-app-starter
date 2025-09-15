@@ -1,26 +1,17 @@
-.PHONY: help format lint check install dev-install clean
+.PHONY: install format whl
 
-help: ## Show this help message
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+check-uv:
+	@if ! command -v uv &> /dev/null; then \
+		echo "uv could not be found, please install it first. Visit https://uv.io for more information."; \
+		exit 1; \
+	fi
 
-install: ## Install production dependencies
-	uv sync --no-dev
+install: check-uv
+	@uv sync --all-groups --all-extras
 
-dev-install: ## Install development dependencies
-	uv sync --extra dev
+format: check-uv
+	@uv run ruff check --select I,F --fix .
+	@uv run ruff format .
 
-format: ## Format code with ruff (includes isort and formatting)
-	uv run ruff check --fix .
-	uv run ruff format .
-
-lint: ## Run linting checks
-	uv run ruff check .
-
-check: lint ## Alias for lint
-
-clean: ## Clean up build artifacts and cache
-	rm -rf .ruff_cache/
-	rm -rf __pycache__/
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
+whl: format check-uv
+	@uv build --verbose --wheel
