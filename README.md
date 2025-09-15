@@ -107,7 +107,7 @@ Clone the repo, install dependencies, set up environment variables, and start co
 
    ![Databricks Jobs UI](docs/images/00-databricks-jobs-ui.png)
 
-   > Job will be deployed as Python Wheel Task and will run on the latest Databricks Runtime with Spark `4.0+`, which supports Python `3.12+` and treats as an Airflow DAG.
+   > Job will be deployed as Python Wheel Task and will run on the latest Databricks Runtime with Spark `4.0+`, which supports Python `3.12+` and treats the job like a DAG in Airflow.
 
    ![Databricks Run Logs](docs/images/01-databricks-run-logs.png)
 
