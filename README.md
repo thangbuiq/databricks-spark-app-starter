@@ -107,14 +107,12 @@ Clone the repo, install dependencies, set up environment variables, and start co
 
    ![Databricks Jobs UI](docs/images/00-databricks-jobs-ui.png)
 
-   > [!NOTE]
    > Job will be deployed as Python Wheel Task and will run on the latest Databricks Runtime with Spark `4.0+`, which supports Python `3.12+` and treats as an Airflow DAG.
 
    ![Databricks Run Logs](docs/images/01-databricks-run-logs.png)
 
 6. Schedule your job under `Schedules & Triggers` in the Databricks Jobs UI. 
-   
-   > [!NOTE]
+
    > You can also trigger the job manually from the UI or scheduled it via cron expression.
 
 ## References
