@@ -23,6 +23,7 @@ def main():
         )
     args = parser.parse_args()
     logger = get_logger()
+    job_name = args.job_name
 
     if is_databricks_runtime():
         logger.info("Detected running in Databricks environment.")
@@ -41,7 +42,6 @@ def main():
             logger.info(f"Setting job parameter {field_name} from args: {vars(args).get(field_name)}")
             param_value = vars(args).get(field_name)
             databricks_spark_session.sql(f"DECLARE OR REPLACE `params.{field_name}` = '{param_value}'")
-        job_name = args.job_name
         logger.info(f"Initialized Spark {databricks_spark_session.version} session.")
         logger.info(f"Running job: {job_name}")
         job_module = importlib.import_module(f"databricks_spark_app.jobs.{job_name}")

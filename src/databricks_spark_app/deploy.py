@@ -94,8 +94,7 @@ class DatabricksDeployer:
         job_params = [jobs.JobParameterDefinition(name="job_name", default=job_name)]
         additional_params = DatabricksAdditionalParams()
         for field_name, value in additional_params.model_dump().items():
-            if value is not None:
-                job_params.append(jobs.JobParameterDefinition(name=field_name, default=value))
+            job_params.append(jobs.JobParameterDefinition(name=field_name, default=value))
 
         job = self.workspace_client.jobs.create(
             name=f"spark_app_job_{job_name}_{self.datetime_str}",
