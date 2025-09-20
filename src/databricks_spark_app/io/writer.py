@@ -78,8 +78,8 @@ def insert_overwrite(
     else:
         logger.info("Table already exists. Skipping creation.")
 
-    sinked_df = spark.sql(f"SELECT * FROM {fqtn}")
-    spark_df = spark_df.select(*sinked_df.schema.names)
+    existing_df = spark.sql(f"SELECT * FROM {fqtn}")
+    spark_df = spark_df.select(*existing_df.schema.names)
     dynamic_partition_writer = spark_df.write.option("partitionOverwriteMode", "dynamic")
     dynamic_partition_writer.mode("overwrite").insertInto(fqtn)
     logger.info(f"Sink process completed for table {fqtn}.")

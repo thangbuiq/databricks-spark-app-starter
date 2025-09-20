@@ -1,6 +1,6 @@
 import logging
 
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import types as t
 
 from databricks_spark_app.io.dataframe import ManagedDataFrame
@@ -21,7 +21,7 @@ class SampleHelloTable(ManagedDataFrame):
         ]
     )
 
-    def process(self) -> ManagedDataFrame:
+    def process(self) -> DataFrame:
         spark = SparkSession.getActiveSession()
         df = spark.sql("""
             SELECT
