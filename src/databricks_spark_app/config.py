@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
+
+
+class DatabricksAdditionalParams(BaseModel):
+    run_environment: Optional[str] = "production"
+    run_date: Optional[str] = "{{ job.start_time.iso_date }}"
 
 
 class DatabricksSettings(BaseSettings):

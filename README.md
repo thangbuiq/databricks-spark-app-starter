@@ -3,11 +3,10 @@
 [![Databricks](https://img.shields.io/badge/Databricks-Connect-FF3621?style=for-the-badge&logo=databricks)](https://databricks.com)
 [![PySpark](https://img.shields.io/badge/PySpark-4.0+-E25A1C?style=for-the-badge&logo=apachespark)](https://spark.apache.org/)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logo=opensourceinitiative)](LICENSE)
 
 ![databricks-banner](https://nri-na.com/wp-content/uploads/2025/04/databricks-logo-white-1.png)
 
-Databricks Spark Application Starter Kit Starter kit for building and deploying Apache Spark applications on Databricks with production-ready structure and best practices.
+Databricks Spark Application Starter Kit is a starter codebase for building and deploying Apache Spark applications on Databricks with production-ready structure and best practices.
 
 > [!NOTE]
 > In short, this starter kit will help you to develop your Spark application locally and deploy it to Databricks Jobs with a single command, and schedule it to run periodically, using [Databricks Connect](https://docs.databricks.com/aws/en/dev-tools/databricks-connect/python/), [Databricks Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog), and [Databricks Jobs](https://docs.databricks.com/aws/en/jobs) (Python Wheel Task).
@@ -16,6 +15,7 @@ Databricks Spark Application Starter Kit Starter kit for building and deploying 
 
 - [Databricks Spark Application Starter Kit](#databricks-spark-application-starter-kit)
   - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
   - [Project Structure](#project-structure)
   - [Prerequisites for local development](#prerequisites-for-local-development)
   - [Development Setup](#development-setup)
@@ -23,8 +23,27 @@ Databricks Spark Application Starter Kit Starter kit for building and deploying 
     - [1. Direct API with `insert_overwrite`](#1-direct-api-with-insert_overwrite)
     - [2. Class-based API with `ManagedDataFrame`](#2-class-based-api-with-manageddataframe)
     - [Quick Comparison](#quick-comparison)
+  - [Support backfilling data with job parameters](#support-backfilling-data-with-job-parameters)
+  - [Example jobs already included](#example-jobs-already-included)
   - [References](#references)
 
+## Quick Start
+
+Run a sample job locally: (make sure you have followed the [Development Setup](#development-setup) steps and setup `.env` file)
+
+```bash
+spark_app --job_name sample_simple_job
+```
+
+Deploy the sample job to Databricks Jobs:
+
+```bash
+databricks_deploy --job_name sample_simple_job
+```
+
+> [!NOTE]
+> You can find the sample job code in `src/databricks_spark_app/jobs/sample_simple_job.py`.
+> This only deploys the job to Databricks Jobs. You still need to schedule it in the Databricks UI under `Schedules & Triggers`.
 
 ## Project Structure
 
@@ -239,6 +258,42 @@ def pipeline():
 | Schema enforcement         | Manual                        | Automatic (`table_schema`)    |
 | Column-level documentation | Manual                        | Automatic (`column_comments`) |
 | Best for                   | Simple jobs                   | Complex/production jobs       |
+
+## Support backfilling data with job parameters
+
+You can define additional job parameters in `DatabricksAdditionalParams` in `config.py`. These parameters will be automatically added as command-line arguments when running the job locally or in Databricks Jobs. You can then access these parameters in your job code via Spark SQL variables with the syntax `` `params.<param_name>` ``. Note that the sign is the backtick (`` ` ``), not a single quote (`'`).
+
+Example:
+
+```python
+spark.sql("""
+   SELECT *
+   FROM some_table
+   WHERE part_date = `params.run_date`
+""")
+```
+
+When running locally:
+
+```bash
+spark_app --job_name sample_run_date_job.py --run_date "2025-09-01"
+``` 
+
+Because the Spark Connect session doesn't support setting or changing Spark configurations, the only way to pass parameters is Spark variables (https://spark.apache.org/docs/4.0.0/sql-ref-syntax-ddl-declare-variable.html).
+
+## Example jobs already included
+
+In the `src/databricks_spark_app/jobs` folder, you will find several example jobs demonstrating different features:
+
+```
+├── jobs
+│   ├── sample_insert_overwrite.py
+│   ├── sample_managed_table.py
+│   ├── sample_run_date_job.py
+│   └── sample_simple_job.py
+```
+
+Just replace/delete these example jobs with your own job files as needed.
 
 ## References
 

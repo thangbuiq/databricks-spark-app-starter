@@ -32,6 +32,6 @@ class SampleHelloTable(ManagedDataFrame):
 
 
 def pipeline():
-    df = SampleHelloTable()
-    df.insert_overwrite(fqtn="temp_db.hello_table", partition_by=["part_date"])
+    hello_table = SampleHelloTable()
+    hello_table.insert_overwrite(fqtn="temp_db.hello_table", partition_by=["part_date"])
     logger.info("Sample job completed successfully.")

@@ -2,7 +2,7 @@
 
 check-uv:
 	@if ! command -v uv &> /dev/null; then \
-		echo "uv could not be found, please install it first. Visit https://uv.io for more information."; \
+		echo "uv could not be found, please install it first. Visit https://docs.astral.sh/uv/ for more information."; \
 		exit 1; \
 	fi
 
