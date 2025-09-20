@@ -44,22 +44,19 @@ class DatabricksDeployer:
             if not whl_files:
                 raise FileNotFoundError("No wheel file found in the dist directory.")
             whl_path = os.path.join("dist", whl_files[0])
-            base, ext = os.path.splitext(whl_path)
-            new_whl_path = f"{base}_{self.datetime_str}{ext}"
-            os.rename(whl_path, new_whl_path)
-            logger.info(f"Built wheel at {new_whl_path}")
-            return new_whl_path
+            logger.info(f"Built wheel at {whl_path}")
+            return whl_path
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to build wheel: {e}")
             sys.exit(1)
 
-    def _upload_file(self, local_path: str) -> str:
+    def _upload_file(self, local_path: str, job_name: str) -> str:
         """Uploads a file to Databricks workspace."""
         base_filename = os.path.basename(local_path)
         catalog_name = self.catalog_name
         schema_name = self.schema_name
         wheels_dir = self.wheels_dir
-        unity_catalog_path = f"/Volumes/{catalog_name}/{schema_name}/{wheels_dir}"
+        unity_catalog_path = f"/Volumes/{catalog_name}/{schema_name}/{wheels_dir}/{job_name}/{self.datetime_str}"
         file_path = f"{unity_catalog_path}/{base_filename}"
         logger.info(f"Uploading file from {local_path} to {file_path}")
         try:
@@ -120,7 +117,10 @@ class DatabricksDeployer:
             environments=[
                 jobs.JobEnvironment(
                     environment_key=environment_key,
-                    spec=compute.Environment(client="3", dependencies=[whl_workspace_path]),
+                    spec=compute.Environment(
+                        environment_version="4",
+                        dependencies=[whl_workspace_path],
+                    ),
                 ),
             ],
             performance_target=jobs.PerformanceTarget.PERFORMANCE_OPTIMIZED,
@@ -137,7 +137,7 @@ class DatabricksDeployer:
         """Runs the deployment workflow: builds wheel, uploads it, and creates a job."""
         try:
             local_whl_path = self._build_wheel()
-            uploaded_path = self._upload_file(local_whl_path)
+            uploaded_path = self._upload_file(local_whl_path, job_name)
             if not uploaded_path:
                 logger.error("Upload failed. Aborting job creation.")
                 return None
