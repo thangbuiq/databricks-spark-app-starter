@@ -11,7 +11,7 @@ from datetime import datetime
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog, compute, jobs
 
-from databricks_spark_app.config import DatabricksSettings
+from databricks_spark_app.config import DatabricksAdditionalParams, DatabricksSettings
 from databricks_spark_app.utils import get_logger, is_databricks_runtime
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,11 @@ class DatabricksDeployer:
     ) -> int:
         """Creates a job that runs a Python wheel task. Returns job_id."""
         environment_key = "spark_app_environment"
+        job_params = [jobs.JobParameterDefinition(name="job_name", default=job_name)]
+        additional_params = DatabricksAdditionalParams()
+        for field_name, value in additional_params.model_dump().items():
+            if value is not None:
+                job_params.append(jobs.JobParameterDefinition(name=field_name, default=value))
 
         job = self.workspace_client.jobs.create(
             name=f"spark_app_job_{job_name}_{self.datetime_str}",
@@ -113,7 +118,7 @@ class DatabricksDeployer:
                 )
             ],
             queue=jobs.QueueSettings(enabled=True),
-            parameters=[jobs.JobParameterDefinition(name="job_name", default=job_name)],
+            parameters=job_params,
             environments=[
                 jobs.JobEnvironment(
                     environment_key=environment_key,

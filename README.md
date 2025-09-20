@@ -23,6 +23,8 @@ Databricks Spark Application Starter Kit Starter kit for building and deploying 
     - [1. Direct API with `insert_overwrite`](#1-direct-api-with-insert_overwrite)
     - [2. Class-based API with `ManagedDataFrame`](#2-class-based-api-with-manageddataframe)
     - [Quick Comparison](#quick-comparison)
+  - [Support backfilling data with job parameters](#support-backfilling-data-with-job-parameters)
+  - [Example jobs already included](#example-jobs-already-included)
   - [References](#references)
 
 
@@ -239,6 +241,42 @@ def pipeline():
 | Schema enforcement         | Manual                        | Automatic (`table_schema`)    |
 | Column-level documentation | Manual                        | Automatic (`column_comments`) |
 | Best for                   | Simple jobs                   | Complex/production jobs       |
+
+## Support backfilling data with job parameters
+
+You can define additional job parameters in `DatabricksAdditionalParams` in `config.py`. These parameters will be automatically added as command-line arguments when running the job locally or in Databricks Jobs. You can then access these parameters in your job code via Spark SQL variables with the syntax `` `params.<param_name>` ``. Note that the sign is the backtick (`` ` ``), not a single quote (`'`).
+
+Example:
+
+```python
+spark.sql("""
+   SELECT *
+   FROM some_table
+   WHERE part_date = `params.run_date`
+""")
+```
+
+When running locally:
+
+```bash
+spark_app --job_name sample_run_date_job.py --run_date "2025-09-01"
+``` 
+
+Because the Spark Connect session doesn't support setting or changing Spark configurations, the only way to pass parameters is Spark variables (https://spark.apache.org/docs/4.0.0/sql-ref-syntax-ddl-declare-variable.html).
+
+## Example jobs already included
+
+In the `src/databricks_spark_app/jobs` folder, you will find several example jobs demonstrating different features:
+
+```
+├── jobs
+│   ├── sample_insert_overwrite.py
+│   ├── sample_managed_table.py
+│   ├── sample_run_date_job.py
+│   └── sample_simple_job.py
+```
+
+Just replace/delete these example jobs with your own job files as needed.
 
 ## References
 
