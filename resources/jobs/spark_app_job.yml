@@ -3,12 +3,17 @@ resources:
     spark_app_job:
       name: spark_app_job_${var.job_name}
       max_concurrent_runs: 1
-      timeout_seconds: 0
+      timeout_seconds: ${var.job_timeout_seconds}
       queue:
         enabled: true
       email_notifications:
+        on_failure: ${var.notification_emails}
         no_alert_for_skipped_runs: false
       performance_target: PERFORMANCE_OPTIMIZED
+      # Once a deployment service principal exists for this workspace, pin job ownership to
+      # it instead of whoever last ran `databricks bundle deploy`:
+      # run_as:
+      #   service_principal_name: <application-id-or-name>
       parameters:
         - name: job_name
           default: ${var.job_name}
@@ -19,7 +24,9 @@ resources:
       tasks:
         - task_key: ${var.job_name}
           run_if: ALL_SUCCESS
-          timeout_seconds: 0
+          timeout_seconds: ${var.job_timeout_seconds}
+          min_retry_interval_millis: 60000
+          max_retries: 1
           environment_key: spark_app_environment
           python_wheel_task:
             package_name: databricks_spark_app

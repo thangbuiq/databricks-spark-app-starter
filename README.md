@@ -23,6 +23,7 @@ Databricks Spark Application Starter Kit is a starter codebase for building and 
     - [Quick Comparison](#quick-comparison)
   - [Support backfilling data with job parameters](#support-backfilling-data-with-job-parameters)
   - [Deploying with Databricks Asset Bundles (UAT/PROD)](#deploying-with-databricks-asset-bundles-uatprod)
+    - [Why a Python Wheel Task, and not Lakeflow Declarative Pipelines or a source-synced script](#why-a-python-wheel-task-and-not-lakeflow-declarative-pipelines-or-a-source-synced-script)
   - [Example jobs already included](#example-jobs-already-included)
   - [References](#references)
 
@@ -317,6 +318,14 @@ databricks bundle deploy -t prod --var="job_name=sample_simple_job"
 ```
 
 Each deploy re-runs `uv build --wheel` and uploads the wheel to `/Volumes/<catalog>/<schema>/python_wheels` in the target workspace, then creates/updates a single job named `spark_app_job_<job_name>`. Redeploying with a different `job_name` updates that same job resource rather than creating a separate one — to run more than one job, redeploy with the other job's name before triggering it, or add another job resource file under `resources/jobs/`.
+
+### Why a Python Wheel Task, and not Lakeflow Declarative Pipelines or a source-synced script
+
+This is a recurring question, so the tradeoff is recorded here rather than re-litigated later:
+
+- **Current: `python_wheel_task` via Asset Bundles.** This is Databricks' own documented pattern for deploying a multi-module Python package ([Python wheel task guide](https://docs.databricks.com/aws/en/dev-tools/bundles/python-wheel)). The wheel is already built in CI on every push, gives a versioned artifact, and matches this repo's package layout (`jobs/` + `io/` imported as a normal Python package).
+- **Lighter alternative: `spark_python_task` with plain source-sync.** Instead of an `artifacts:` build step and a wheel upload to a UC volume, the bundle just syncs `.py` files straight to the workspace and the task points at a script path directly — no build step, near-instant deploys. The tradeoff: you lose pip-installable/versioned-package semantics, and third-party dependencies have to be declared via `libraries:`/`environments:` rather than wheel metadata. Worth revisiting if build/upload latency ever becomes a real pain point.
+- **Not a substitute: [Lakeflow Declarative Pipelines](https://docs.databricks.com/aws/en/dlt/)** (formerly Delta Live Tables). This is a separate declarative DAG framework for incremental ETL with built-in data-quality expectations and automatic dependency inference — it doesn't replace the wheel-deploy *mechanism*, it replaces the *job* with a different execution model. Adopting it would mean rewriting `jobs/*.py` as pipeline table definitions, not swapping a deploy step.
 
 ## Example jobs already included
 

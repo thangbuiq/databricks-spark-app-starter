@@ -12,6 +12,7 @@ A starter kit for building PySpark applications that run locally via Databricks 
 make install   # uv sync --all-groups --all-extras
 make format    # ruff check --select I,F --fix . && ruff format .
 make whl       # format, then uv build --verbose --wheel
+make test      # uv run pytest
 ```
 
 Run a job locally (requires `.env` with `DATABRICKS_HOST`/`DATABRICKS_TOKEN`, copied from `.env.example`):
@@ -28,7 +29,7 @@ databricks bundle deploy -t uat --var="job_name=<job_module_name>"   # or -t pro
 databricks bundle run spark_app_job -t uat                           # trigger a run
 ```
 
-There are no automated tests in this repo. There is no lint/format check beyond `ruff` (line-length 120, rules `F`, `I001`, `RUF022`). CI (`.github/workflows/build.yaml`) just runs `uv sync` + `uv build --wheel` on push/PR to `main`.
+Unit tests live in `tests/` (pytest, `make test`) and cover only pure/mockable logic in `io/writer.py` and `io/dataframe.py` — `databricks-connect`'s `pyspark` shim raises `RuntimeError` for any non-Connect master, so there is no local `SparkSession` and no way to test the actual Unity Catalog table-creation/insert-overwrite paths locally; those tests mock `SparkSession.getActiveSession()` (see `tests/conftest.py`) rather than run real Spark. There is no integration-test suite against a live workspace. Lint/format is `ruff` (line-length 120, rules `E`, `W`, `F`, `I001`, `RUF022`, `B`, `UP`), also runnable via `.pre-commit-config.yaml`. CI (`.github/workflows/build.yaml`) runs a `lint` job (`ruff check` + `ruff format --check`), a `test` job (`pytest`), and the original `uv build --wheel` job on push/PR to `main`.
 
 ## Architecture
 

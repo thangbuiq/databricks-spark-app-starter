@@ -1,7 +1,6 @@
 """Module for writing DataFrames to Delta tables with insert overwrite functionality."""
 
 import logging
-from typing import List
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import types as t
@@ -9,12 +8,23 @@ from pyspark.sql import types as t
 logger = logging.getLogger(__name__)
 
 
+def _escape_sql_double_quoted(value: str) -> str:
+    """Escape double quotes so a comment value can't break out of a double-quoted SQL literal."""
+    return value.replace('"', '\\"')
+
+
 def create_table_with_comments(
-    fqtn: str, table_comment, column_comments, force_schema: t.StructType, partition_by: List[str] = []
+    fqtn: str,
+    table_comment: str,
+    column_comments: dict[str, str] | None,
+    force_schema: t.StructType,
+    partition_by: list[str] | None = None,
 ) -> None:
     """
     Create table with schema and comments including partition columns.
     """
+    partition_by = partition_by or []
+    column_comments = column_comments or {}
     spark = SparkSession.getActiveSession()
     column_definitions = []
     partition_columns = []
@@ -22,7 +32,7 @@ def create_table_with_comments(
     for field in force_schema.fields:
         comment_clause = ""
         if field.name in column_comments:
-            comment_clause = f' COMMENT "{column_comments[field.name]}"'
+            comment_clause = f' COMMENT "{_escape_sql_double_quoted(column_comments[field.name])}"'
 
         column_def = f"{field.name} {field.dataType.simpleString().upper()}{comment_clause}"
 
@@ -39,7 +49,7 @@ def create_table_with_comments(
         create_table_sql_stm += f" PARTITIONED BY (\n  {partitioned_by_sql}\n)"
 
     if table_comment:
-        create_table_sql_stm += f'\nCOMMENT "{table_comment}"'
+        create_table_sql_stm += f'\nCOMMENT "{_escape_sql_double_quoted(table_comment)}"'
 
     logger.info("Creating table with SQL: \n" + create_table_sql_stm)
     spark.sql(create_table_sql_stm)
@@ -51,8 +61,8 @@ def insert_overwrite(
     spark_df: DataFrame,
     force_schema: t.StructType,
     table_comment: str = "",
-    column_comments: dict = {},
-    partition_by: list = None,
+    column_comments: dict[str, str] | None = None,
+    partition_by: list[str] | None = None,
 ):
     """
     Insert overwrite into a Delta table. Create table if it does not exist.
@@ -65,6 +75,8 @@ def insert_overwrite(
         column_comments (dict, optional): Comments for the columns.
         partition_by (list, optional): List of partition columns.
     """
+    column_comments = column_comments or {}
+    partition_by = partition_by or []
     spark = SparkSession.getActiveSession()
     is_table_exists: bool = spark.catalog.tableExists(fqtn)
 
@@ -74,7 +86,7 @@ def insert_overwrite(
 
     if not is_table_exists:
         logger.info("Table does not exist. Creating table...")
-        create_table_with_comments(fqtn, table_comment, column_comments, force_schema, partition_by or [])
+        create_table_with_comments(fqtn, table_comment, column_comments, force_schema, partition_by)
     else:
         logger.info("Table already exists. Skipping creation.")
 
@@ -87,7 +99,10 @@ def insert_overwrite(
 
 
 def post_sink_hook(
-    fqtn: str, table_comment: str = "", column_comments: dict = {}, partition_by: List[str] = []
+    fqtn: str,
+    table_comment: str = "",
+    column_comments: dict[str, str] | None = None,
+    partition_by: list[str] | None = None,
 ) -> None:
     """
     Update table and column comments after data insertion.
@@ -99,18 +114,22 @@ def post_sink_hook(
         column_comments (dict, optional): Comments for the columns.
         partition_by (list, optional): List of partition columns.
     """
+    column_comments = column_comments or {}
+    partition_by = partition_by or []
     spark = SparkSession.getActiveSession()
     logger.info(f"Post sink operations completed for table {fqtn}.")
 
     if table_comment:
-        spark.sql(f'ALTER TABLE {fqtn} SET TBLPROPERTIES ("comment"="{table_comment}")')
+        spark.sql(f'ALTER TABLE {fqtn} SET TBLPROPERTIES ("comment"="{_escape_sql_double_quoted(table_comment)}")')
 
     if column_comments:
         for column, comment in column_comments.items():
             if column not in partition_by:
                 try:
-                    spark.sql(f'ALTER TABLE {fqtn} ALTER COLUMN {column} COMMENT "{comment}"')
-                except Exception as e:
-                    logger.warning(f"Could not set comment for column {column}: {str(e)}")
+                    spark.sql(
+                        f'ALTER TABLE {fqtn} ALTER COLUMN {column} COMMENT "{_escape_sql_double_quoted(comment)}"'
+                    )
+                except Exception:
+                    logger.exception(f"Could not set comment for column {column}")
 
     logger.info(f"Updated table {fqtn} with comments and properties.")

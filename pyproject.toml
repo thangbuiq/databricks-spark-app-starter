@@ -19,6 +19,9 @@ spark_app = "databricks_spark_app.pipeline:main"
 dev = [
     "ruff>=0.1.0",
 ]
+test = [
+    "pytest>=8.0.0",
+]
 
 [tool.uv]
 package = true
@@ -28,7 +31,10 @@ line-length = 120
 exclude = [".venv", "build", "dist", "include"]
 
 [tool.ruff.lint]
-select = ["F", "I001", "RUF022"]
+select = ["E", "W", "F", "I001", "RUF022", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["hatchling>=1.18.0"]
