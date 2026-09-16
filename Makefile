@@ -1,4 +1,4 @@
-.PHONY: install format whl
+.PHONY: install format whl test
 
 check-uv:
 	@if ! command -v uv >/dev/null 2>&1; then \
@@ -15,3 +15,6 @@ format: check-uv
 
 whl: format check-uv
 	@uv build --verbose --wheel
+
+test: check-uv
+	@uv run pytest
