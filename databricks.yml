@@ -28,6 +28,15 @@ variables:
   schema:
     description: Unity Catalog schema holding the wheel-artifact volume. Must already exist.
     default: default
+  job_timeout_seconds:
+    description: Max seconds a job run (and its task) may run before being killed.
+    default: 3600
+  notification_emails:
+    description: >-
+      Email addresses to notify on job failure. Override with
+      --var='notification_emails=["you@company.com"]'.
+    type: complex
+    default: []
 
 artifacts:
   spark_app_wheel:
@@ -38,6 +47,8 @@ artifacts:
 targets:
   uat:
     default: true
+    presets:
+      trigger_pause_status: PAUSED
     variables:
       run_environment: uat
       schema: uat
