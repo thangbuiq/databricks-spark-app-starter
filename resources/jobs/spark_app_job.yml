@@ -1,0 +1,32 @@
+resources:
+  jobs:
+    spark_app_job:
+      name: spark_app_job_${var.job_name}
+      max_concurrent_runs: 1
+      timeout_seconds: 0
+      queue:
+        enabled: true
+      email_notifications:
+        no_alert_for_skipped_runs: false
+      performance_target: PERFORMANCE_OPTIMIZED
+      parameters:
+        - name: job_name
+          default: ${var.job_name}
+        - name: run_environment
+          default: ${var.run_environment}
+        - name: run_date
+          default: ${var.run_date}
+      tasks:
+        - task_key: ${var.job_name}
+          run_if: ALL_SUCCESS
+          timeout_seconds: 0
+          environment_key: spark_app_environment
+          python_wheel_task:
+            package_name: databricks_spark_app
+            entry_point: spark_app
+      environments:
+        - environment_key: spark_app_environment
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../../dist/*.whl

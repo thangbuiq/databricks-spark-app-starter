@@ -1,0 +1,52 @@
+# Databricks Asset Bundle configuration.
+# See https://docs.databricks.com/aws/en/dev-tools/bundles/ for reference.
+
+bundle:
+  name: databricks_spark_app
+
+include:
+  - resources/**/*.yml
+
+# Auth is resolved from the DATABRICKS_HOST/DATABRICKS_TOKEN env vars active in your
+# shell when you run `databricks bundle ...` - no host/profile is hardcoded here, so
+# re-export those two vars for the workspace you're targeting before every deploy.
+variables:
+  job_name:
+    description: >-
+      Job module name from src/databricks_spark_app/jobs/ (without .py) to deploy and run.
+      Override with --var="job_name=<name>".
+    default: sample_simple_job
+  run_environment:
+    description: Value passed through to the job as `params.run_environment`.
+    default: production
+  run_date:
+    description: Value passed through to the job as `params.run_date`.
+    default: "{{job.start_time.iso_date}}"
+  catalog:
+    description: Unity Catalog catalog holding the wheel-artifact volume. Must already exist.
+    default: workspace
+  schema:
+    description: Unity Catalog schema holding the wheel-artifact volume. Must already exist.
+    default: default
+
+artifacts:
+  spark_app_wheel:
+    type: whl
+    build: uv build --wheel
+    path: .
+
+targets:
+  uat:
+    default: true
+    variables:
+      run_environment: uat
+      schema: uat
+    workspace:
+      artifact_path: /Volumes/${var.catalog}/${var.schema}/python_wheels
+
+  prod:
+    variables:
+      run_environment: production
+      schema: prod
+    workspace:
+      artifact_path: /Volumes/${var.catalog}/${var.schema}/python_wheels

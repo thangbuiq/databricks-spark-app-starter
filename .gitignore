@@ -1,3 +1,6 @@
+# databricks
+.databrickscfg
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -133,6 +136,9 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
+
+# Databricks Asset Bundles
+.databricks/
 
 # Environments
 .env

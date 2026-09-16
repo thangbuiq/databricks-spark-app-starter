@@ -1,7 +1,7 @@
 .PHONY: install format whl
 
 check-uv:
-	@if ! command -v uv &> /dev/null; then \
+	@if ! command -v uv >/dev/null 2>&1; then \
 		echo "uv could not be found, please install it first. Visit https://docs.astral.sh/uv/ for more information."; \
 		exit 1; \
 	fi
