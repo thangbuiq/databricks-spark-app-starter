@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
@@ -16,8 +15,8 @@ class ManagedDataFrame(ABC):
     """Base class for managed table operations."""
 
     table_comment: str
-    column_comments: Dict[str, str]
-    table_schema: StructType
+    column_comments: dict[str, str]
+    table_schema: StructType | None = None
 
     def __init__(self):
         self.spark: SparkSession = SparkSession.getActiveSession()
@@ -31,7 +30,7 @@ class ManagedDataFrame(ABC):
         """
         raise NotImplementedError("Subclasses must implement the 'process' method.")
 
-    def insert_overwrite(self, fqtn: str, partition_by: List[str] = []) -> None:
+    def insert_overwrite(self, fqtn: str, partition_by: list[str] | None = None) -> None:
         """
         Write processed DataFrame to the specified table.
         """
@@ -42,6 +41,6 @@ class ManagedDataFrame(ABC):
             table_comment=self.table_comment,
             column_comments=self.column_comments,
             fqtn=fqtn,
-            partition_by=partition_by,
+            partition_by=partition_by or [],
         )
         logger.info(f"Insert overwrite process completed for table {fqtn}.")

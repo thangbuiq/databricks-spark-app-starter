@@ -40,7 +40,7 @@ def main():
     try:
         for field_name in DatabricksAdditionalParams.model_fields.keys():
             logger.info(f"Setting job parameter {field_name} from args: {vars(args).get(field_name)}")
-            param_value = vars(args).get(field_name)
+            param_value = str(vars(args).get(field_name)).replace("'", "\\'")
             databricks_spark_session.sql(f"DECLARE OR REPLACE `params.{field_name}` = '{param_value}'")
         logger.info(f"Initialized Spark {databricks_spark_session.version} session.")
         logger.info(f"Running job: {job_name}")
