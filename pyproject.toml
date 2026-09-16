@@ -8,14 +8,12 @@ dependencies = [
     "pydantic>=2.11.8",
     "pydantic-settings>=2.10.1",
     "databricks-connect>=15.0.0",
-    "databricks-cli>=0.18.0",
     "setuptools>=80.9.0",
     "wheel>=0.45.1",
 ]
 
 [project.scripts]
 spark_app = "databricks_spark_app.pipeline:main"
-databricks_deploy = "databricks_spark_app.deploy:main"
 
 [project.optional-dependencies]
 dev = [

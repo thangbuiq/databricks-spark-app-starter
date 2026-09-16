@@ -4,12 +4,10 @@
 [![PySpark](https://img.shields.io/badge/PySpark-4.0+-E25A1C?style=for-the-badge&logo=apachespark)](https://spark.apache.org/)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python)](https://www.python.org/)
 
-![databricks-banner](https://nri-na.com/wp-content/uploads/2025/04/databricks-logo-white-1.png)
-
 Databricks Spark Application Starter Kit is a starter codebase for building and deploying Apache Spark applications on Databricks with production-ready structure and best practices.
 
 > [!NOTE]
-> In short, this starter kit will help you to develop your Spark application locally and deploy it to Databricks Jobs with a single command, and schedule it to run periodically, using [Databricks Connect](https://docs.databricks.com/aws/en/dev-tools/databricks-connect/python/), [Databricks Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog), and [Databricks Jobs](https://docs.databricks.com/aws/en/jobs) (Python Wheel Task).
+> In short, this starter kit will help you to develop your Spark application locally and deploy it to Databricks Jobs with a single command, and schedule it to run periodically, using [Databricks Connect](https://docs.databricks.com/aws/en/dev-tools/databricks-connect/python/), [Databricks Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog), [Databricks Jobs](https://docs.databricks.com/aws/en/jobs) (Python Wheel Task), and [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/) for declarative, multi-environment (UAT/PROD) deployment.
 
 ## Table of Contents
 
@@ -24,6 +22,7 @@ Databricks Spark Application Starter Kit is a starter codebase for building and 
     - [2. Class-based API with `ManagedDataFrame`](#2-class-based-api-with-manageddataframe)
     - [Quick Comparison](#quick-comparison)
   - [Support backfilling data with job parameters](#support-backfilling-data-with-job-parameters)
+  - [Deploying with Databricks Asset Bundles (UAT/PROD)](#deploying-with-databricks-asset-bundles-uatprod)
   - [Example jobs already included](#example-jobs-already-included)
   - [References](#references)
 
@@ -35,15 +34,16 @@ Run a sample job locally: (make sure you have followed the [Development Setup](#
 spark_app --job_name sample_simple_job
 ```
 
-Deploy the sample job to Databricks Jobs:
+Deploy the sample job to Databricks Jobs (UAT by default):
 
 ```bash
-databricks_deploy --job_name sample_simple_job
+databricks bundle deploy -t uat --var="job_name=sample_simple_job"
 ```
 
 > [!NOTE]
 > You can find the sample job code in `src/databricks_spark_app/jobs/sample_simple_job.py`.
 > This only deploys the job to Databricks Jobs. You still need to schedule it in the Databricks UI under `Schedules & Triggers`.
+> See [Deploying with Databricks Asset Bundles](#deploying-with-databricks-asset-bundles-uatprod) for the full UAT/PROD workflow.
 
 ## Project Structure
 
@@ -57,9 +57,11 @@ databricks-spark-app-starter/
 │   │   ├── dataframe.py    # ManagedDataFrame class for schema and comments management
 │   │   └── writer.py       # insert_overwrite function for writing data to tables   
 │   ├── pipeline.py         # entry point for running spark jobs
-│   ├── deploy.py           # script to deploy jobs to Databricks
 │   ├── utils.py            # utility functions
 │   └── config.py           # configuration management
+├── databricks.yml          # Databricks Asset Bundle root config (variables, artifacts, uat/prod targets)
+├── resources/jobs/         # Databricks Job resource definitions deployed by the bundle
+│   └── spark_app_job.yml
 └── ...                     # other project files
 ```
 
@@ -85,20 +87,12 @@ Clone the repo, install dependencies, set up environment variables, and start co
    ```
    After that, a virtual environment will be created in the `.venv` directory.
 
-2. Prepare environment variables:
-   - Copy `.env.example` to `.env` and fill in your Databricks host and token.
-      ```bash
-      cp .env.example .env
-      ```
-   - Fill in your Databricks host and token in the `.env` file.
-      ```bash
-      DATABRICKS_HOST=your-databricks-host
-      DATABRICKS_TOKEN=your-databricks-token
-      ```
-   - Source the `.env` file if needed:
-      ```bash
-      source .env
-      ```
+2. Authenticate with your Databricks workspace by creating a `~/.databrickscfg` file with the following content:
+   ```ini
+   [<some-unique-configuration-profile-name>]
+   host  = <workspace-url>
+   token = <token>
+   ```
 
 3. Develop your Spark application in the `src/databricks_spark_app/jobs/*.py` files with `pipeline` function as the entry point. Example:
 
@@ -135,9 +129,18 @@ Clone the repo, install dependencies, set up environment variables, and start co
    ```
    Note: The job name should match the filename in `src/databricks_spark_app/jobs/`.
 
-5. Deploy your Spark application to Databricks:
+5. Deploy your Spark application to Databricks with the [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install) and [Asset Bundles](#deploying-with-databricks-asset-bundles-uatprod):
+
    ```bash
-   databricks_deploy --job_name sample_simple_job
+   export DATABRICKS_HOST=your-uat-databricks-host
+   export DATABRICKS_TOKEN=your-uat-databricks-token
+   databricks bundle deploy -t uat --var="job_name=sample_simple_job"
+   ```
+
+   Or use the `profile` option if you have multiple profiles in your `~/.databrickscfg`:
+
+   ```bash
+   databricks bundle deploy -t uat --var="job_name=sample_simple_job" --profile <some-unique-configuration-profile-name>
    ```
 
    This will package your application and deploy it to Databricks Jobs. You can verify the deployment in the Databricks UI under `Jobs & Pipelines`.
@@ -148,9 +151,9 @@ Clone the repo, install dependencies, set up environment variables, and start co
 
    ![Databricks Run Logs](assets/01-databricks-run-logs.png)
 
-6. Schedule your job under `Schedules & Triggers` in the Databricks Jobs UI. 
+6. Schedule your job under `Schedules & Triggers` in the Databricks Jobs UI.
 
-   > You can also trigger the job manually from the UI or scheduled it via cron expression.
+   > You can also trigger the job manually from the UI, run it with `databricks bundle run spark_app_job -t uat`, or schedule it via cron expression.
 
 ## Managing Table Writes with `insert_overwrite` and `ManagedDataFrame`
 
@@ -175,34 +178,37 @@ from databricks_spark_app.io.writer import insert_overwrite
 
 logger = logging.getLogger(__name__)
 
-def pipeline():
-   spark = SparkSession.getActiveSession()
 
-   df = spark.sql("""
+def pipeline():
+    spark = SparkSession.getActiveSession()
+
+    df = spark.sql("""
    SELECT
          'Hello, Databricks!' AS message,
          CAST(CURRENT_DATE() AS STRING) AS part_date
    """)
 
-   df.show(truncate=False)
-   force_schema = t.StructType([
-      t.StructField("message", t.StringType(), nullable=False),
-      t.StructField("part_date", t.StringType(), nullable=False),
-   ])
-   spark.sql("CREATE DATABASE IF NOT EXISTS temp_db")
-   insert_overwrite(
-      fqtn="temp_db.hello_table",
-      spark_df=df,
-      force_schema=force_schema,
-      table_comment="Sample table for insert overwrite demonstration",
-      column_comments={
+    df.show(truncate=False)
+    force_schema = t.StructType(
+        [
+            t.StructField("message", t.StringType(), nullable=False),
+            t.StructField("part_date", t.StringType(), nullable=False),
+        ]
+    )
+    spark.sql("CREATE DATABASE IF NOT EXISTS temp_db")
+    insert_overwrite(
+        fqtn="temp_db.hello_table",
+        spark_df=df,
+        force_schema=force_schema,
+        table_comment="Sample table for insert overwrite demonstration",
+        column_comments={
             "message": "A greeting message",
             "part_date": "Partition date",
-      },
-      partition_by=["part_date"],
-   )
+        },
+        partition_by=["part_date"],
+    )
 
-   logger.info("Sample job completed successfully.")
+    logger.info("Sample job completed successfully.")
 ```
 
 ### 2. Class-based API with `ManagedDataFrame`
@@ -225,16 +231,19 @@ from databricks_spark_app.io.dataframe import ManagedDataFrame
 
 logger = logging.getLogger(__name__)
 
+
 class SampleHelloTable(ManagedDataFrame):
     table_comment = "Sample table for insert overwrite demonstration"
     column_comments = {
         "message": "A greeting message",
         "part_date": "Partition date",
     }
-    table_schema = t.StructType([
-        t.StructField("message", t.StringType(), nullable=False),
-        t.StructField("part_date", t.StringType(), nullable=False),
-    ])
+    table_schema = t.StructType(
+        [
+            t.StructField("message", t.StringType(), nullable=False),
+            t.StructField("part_date", t.StringType(), nullable=False),
+        ]
+    )
 
     def process(self):
         spark = SparkSession.getActiveSession()
@@ -243,6 +252,7 @@ class SampleHelloTable(ManagedDataFrame):
                 'Hello, Databricks! From ManagedDataFrame' AS message,
                 CAST(CURRENT_DATE() AS STRING) AS part_date
         """)
+
 
 def pipeline():
     job = SampleHelloTable()
@@ -281,6 +291,33 @@ spark_app --job_name sample_run_date_job.py --run_date "2025-09-01"
 
 Because the Spark Connect session doesn't support setting or changing Spark configurations, the only way to pass parameters is Spark variables (https://spark.apache.org/docs/4.0.0/sql-ref-syntax-ddl-declare-variable.html).
 
+## Deploying with Databricks Asset Bundles (UAT/PROD)
+
+Deployment is handled declaratively by a [Databricks Asset Bundle](https://docs.databricks.com/aws/en/dev-tools/bundles/): `databricks.yml` (bundle config, variables, wheel artifact) plus `resources/jobs/spark_app_job.yml` (the Databricks Job resource). There is no imperative deploy script anymore.
+
+Prerequisites:
+
+- Install the standalone [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install) (v0.230+), which provides the `databricks bundle` commands.
+- In each workspace (UAT and PROD), make sure the Unity Catalog `catalog`/`schema` used for the wheel artifact volume already exists (default `workspace.default`, override with `--var="catalog=...,schema=..."`). The bundle does not create these for you.
+
+Two targets are defined, `uat` (default) and `prod`. Auth is resolved from the `DATABRICKS_HOST`/`DATABRICKS_TOKEN` env vars active in your shell — there's no host hardcoded in `databricks.yml`, so re-export those two vars for the workspace you're deploying to before switching targets:
+
+```bash
+# UAT
+export DATABRICKS_HOST=your-uat-databricks-host
+export DATABRICKS_TOKEN=your-uat-databricks-token
+databricks bundle validate -t uat
+databricks bundle deploy -t uat --var="job_name=sample_simple_job"
+databricks bundle run spark_app_job -t uat
+
+# PROD
+export DATABRICKS_HOST=your-prod-databricks-host
+export DATABRICKS_TOKEN=your-prod-databricks-token
+databricks bundle deploy -t prod --var="job_name=sample_simple_job"
+```
+
+Each deploy re-runs `uv build --wheel` and uploads the wheel to `/Volumes/<catalog>/<schema>/python_wheels` in the target workspace, then creates/updates a single job named `spark_app_job_<job_name>`. Redeploying with a different `job_name` updates that same job resource rather than creating a separate one — to run more than one job, redeploy with the other job's name before triggering it, or add another job resource file under `resources/jobs/`.
+
 ## Example jobs already included
 
 In the `src/databricks_spark_app/jobs` folder, you will find several example jobs demonstrating different features:
@@ -299,4 +336,5 @@ Just replace/delete these example jobs with your own job files as needed.
 
 - Databricks Jobs: https://docs.databricks.com/aws/en/jobs
 - Databricks Connect For Python: https://docs.databricks.com/aws/en/dev-tools/databricks-connect/python/
+- Databricks Asset Bundles: https://docs.databricks.com/aws/en/dev-tools/bundles/
 - PySpark Documentation: https://spark.apache.org/docs/4.0.0/api/python/index.html
